@@ -17,30 +17,39 @@
 <launch>
   <param name="/use_sim_time" value="true" />
 
+  <arg name="ns" default="create1"/>
+
+  <arg name="odom_in" value="/$(arg ns)/odom"/>
   <node name="cartographer_node" pkg="cartographer_ros"
       type="cartographer_node" args="
           -configuration_directory
               $(find cartographer_turtlebot)/configuration_files
           -configuration_basename turtlebot_depth_camera_2d.lua"
-      output="screen" />
+      output="screen">
+    <remap from="odom" to="$(arg odom_in)"/>
+  </node>
 
   <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
       type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
 
+  <arg name="imu_in"  value="/$(arg ns)/imu/data"/>
+  <arg name="imu_out" value="/imu"/>
   <node name="flat_world_imu_node" pkg="cartographer_turtlebot"
       type="cartographer_flat_world_imu_node" output="screen">
-    <remap from="imu_in" to="/mobile_base/sensors/imu_data_raw" />
-    <remap from="imu_out" to="/imu" />
+    <remap from="imu_in" to="$(arg imu_in)" />
+    <remap from="imu_out" to="$(arg imu_out)" />
   </node>
 
+  <arg name="depth_in" value="/$(arg ns)/astra/depth/image_raw"/>
+  <!-- <arg name="scan_out" value="/$(arg ns)/laser/scan"/> -->
   <node name="squash_depth_camera" pkg="depthimage_to_laserscan"
       type="depthimage_to_laserscan">
-    <remap from="image" to="/camera/depth/image_raw" />
+    <remap from="image" to="$(arg depth_in)" />
+    <!-- <param name="output_frame_id" value="$(arg ns)_tf/astra_depth_frame"/> -->
+    <param name="output_frame_id" value="$(arg ns)_tf/astra_link"/>
+    <!-- <remap from="scan"  to="$(arg scan_out)"/> -->
   </node>
 
   <node name="rviz" pkg="rviz" type="rviz" required="true"
-      args="-d $(find cartographer_turtlebot
-          )/configuration_files/demo_turtlebot.rviz" />
-  <node name="playbag" pkg="rosbag" type="play"
-      args="--clock $(arg bag_filename)" />
+      args="-d $(find ca_tools)/rviz/cartographer.rviz" />
 </launch>
